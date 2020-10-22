@@ -1,0 +1,17 @@
+{
+  "name": "thinkbudget-service",
+  "version": "1.0.0",
+  "description": "Back end for thinkBudget application",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app"
+  },
+  "author": "Michael Rayson",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "mongoose": "^5.10.9",
+    "tslint": "^6.1.3"
+  }
+}
