@@ -11,7 +11,7 @@ const UserSchema = schema({
 const User = module.exports = mongoose.model("User", UserSchema);
 
 module.exports.addUser = async (user) => {
-    user.password = await bcrypt.hash(user.password, 10);
+    console.log('Adding user');
     User.create(user);
 }
 

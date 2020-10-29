@@ -29,13 +29,18 @@ router.post('/register', async (req, res) => {
         const user = {
             username: req.body.username,
             email: req.body.email,
-            password: req.body.password
+            password: await bcrypt.hash(req.body.password, 10)
         }
-        await User.addUser(user);
-        let payload = { subject: user.email }
-        let token = jwt.sign(payload, secret);
-        res.status(200).send({ token });
-    } catch {
+        User.getUserByEmail(req.body.email, (err, existingUser) => {
+            if (existingUser) {
+                res.status(406).send('Email already in use');
+            } else {
+                User.addUser(user);
+                res.status(200).send();
+            }
+        });
+    } catch (e){
+        console.log(e);
         res.status(401).send('Error with creation');
     }
 });
@@ -49,7 +54,7 @@ router.post('/login', (req, res) => {
             } else {
                 let payload = { subject: req.body.email }
                 let token = jwt.sign(payload, secret);
-                res.status(200).send({ token });
+                res.status(200).send({ token, user });
             }
         } else {
             res.status(401).send('Invalid email');
