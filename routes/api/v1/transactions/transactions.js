@@ -60,7 +60,17 @@ router.post('/:userEmail', verifyToken, (req, res) => {
 });
 
 router.get('/:userEmail', verifyToken, (req, res) => {
-    
+    try {
+        Transaction.getAllTransactions(req.params.userEmail, (err, transactions) => {
+            if (err) {
+                res.status(401).send('Could not retrieve transactions.');
+            } else {
+                res.status(200).send(transactions);
+            }
+        });
+    } catch (err) {
+        res.status(401).send('Error getting transactions.');
+    }
 });
 
 module.exports = router;

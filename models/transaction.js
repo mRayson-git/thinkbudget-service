@@ -18,6 +18,10 @@ module.exports.addTransaction = (transaction) => {
     Transaction.create(transaction);
 }
 
+module.exports.getAllTransactions = (userEmail, callback) => {
+    Transaction.find({ 'userEmail': userEmail }, callback).sort({ 'date': -1 });
+}
+
 module.exports.getMostRecent = (userEmail, accountName, callback) => {
     Transaction.findOne({ "userEmail": userEmail, "accountName": accountName }, callback).sort({"date":-1});
 }
