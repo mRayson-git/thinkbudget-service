@@ -20,56 +20,47 @@ function verifyToken(req, res, next) {
     next(); 
 }
 
-router.post('/:userEmail', verifyToken, (req, res) => {
-    const transactions = req.body;
-    let notInDate = 0;
-    let inDate = 0;
-    try {
-        Transaction.getMostRecent(req.params.userEmail, transactions[0].accountName, (err, transaction) => {
-            if (err) {
-                console.log(err);
-            } else {
-                // if there is a most recent transaction, accept only transactions that happen after it
-                if (transaction !== null) {
-                    const mostRecentRead = transaction.date;
-                    transactions.forEach(transaction => {
-                        if (Date.parse(transaction.date) > Date.parse(mostRecentRead)) {
-                            console.log('Transaction in date:');
-                            console.log(transaction);
-                            inDate++;
-                            Transaction.addTransaction(transaction);
-                        } else {
-                            notInDate++;
-                        }
-                    });
-                // If no most recent transaction, accept all
-                } else {
-                    transactions.forEach(transaction => {
-                        inDate++;
-                        Transaction.addTransaction(transaction);
-                    });
-                }
-                console.log(`# of successes: ${inDate}`);
-                console.log(`# of anomalies: ${notInDate}`);
-                res.status(200).send();
-            }
-        });
-    } catch (e) {
-        res.status(401).send();
+function isTransDup(mostRecent, newTrans) {
+    // if there is no most recent
+    if (!mostRecent) {
+        return false;
     }
+    return (Date.parse(mostRecent.date) >= Date.parse(newTrans.date));
+}
+
+// adding transactions to the database add send them back to the client
+router.post('/:userEmail', verifyToken, async (req, res) => {
+    try {
+        // array of transactions to be added
+        newTransactions = [];
+        // all the transactions to add
+        transactions = req.body;
+        // most recent transaction in the database
+        mostRecent = await Transaction.getMostRecent(req.params.userEmail, transactions[0].accountName);
+        // for each of the transactions, check if in date & add to database
+        for (let transaction of transactions) {
+            if (!isTransDup(mostRecent, transaction)) {
+                transaction = await Transaction.addTransaction(transaction);
+                newTransactions.push(transaction);
+            }
+        }
+        // send added transactions back to the client
+        console.log(newTransactions);
+        res.status(200).send(newTransactions);
+    } catch (err) {
+        res.status(401).send(err);
+    }
+    
+    
 });
 
-router.get('/:userEmail', verifyToken, (req, res) => {
+router.get('/:userEmail', verifyToken, async (req, res) => {
     try {
-        Transaction.getAllTransactions(req.params.userEmail, (err, transactions) => {
-            if (err) {
-                res.status(401).send('Could not retrieve transactions.');
-            } else {
-                res.status(200).send(transactions);
-            }
-        });
+        const transactions = await Transaction.getAllTransactions(req.params.userEmail);
+        console.log(transactions);
+        res.status(200).send(transactions);
     } catch (err) {
-        res.status(401).send('Error getting transactions.');
+        res.status(401).send(err);
     }
 });
 

@@ -14,14 +14,43 @@ const TransactionSchema = schema({
 
 const Transaction = module.exports = mongoose.model('Transaction', TransactionSchema);
 
-module.exports.addTransaction = (transaction) => {
-    Transaction.create(transaction);
+module.exports.addTransaction = async (transaction) => {
+    try {
+        const trans = await Transaction.create(transaction);
+        return trans;
+    } catch (err) {
+        throw err;
+    }
+    
 }
 
-module.exports.getAllTransactions = (userEmail, callback) => {
-    Transaction.find({ 'userEmail': userEmail }, callback).sort({ 'date': -1 });
+module.exports.addManyTransactions = async (transactions) => {
+    try {
+        let newTransactions = [];
+        transactions.forEach(transaction => {
+            const trans = Transaction.create(transaction);
+            newTransactions.push(trans);
+        });
+        return newTransactions;
+    } catch(err) {
+        throw err;
+    }
 }
 
-module.exports.getMostRecent = (userEmail, accountName, callback) => {
-    Transaction.findOne({ "userEmail": userEmail, "accountName": accountName }, callback).sort({"date":-1});
+module.exports.getAllTransactions = async (userEmail) => {
+    try{
+        const allTransactions = await Transaction.find({ 'userEmail': userEmail }).sort({ 'date': -1 }).exec();
+        return allTransactions;
+    } catch (err) {
+        throw err;
+    }
+}
+
+module.exports.getMostRecent = async (userEmail, accountName) => {
+    try {
+        const mostRecent = await Transaction.findOne({ "userEmail": userEmail, "accountName": accountName }).sort({"date":-1}).exec();
+        return mostRecent;
+    } catch(err) {
+        throw err;
+    }
 }
