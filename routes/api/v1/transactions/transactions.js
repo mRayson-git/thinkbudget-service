@@ -25,7 +25,12 @@ function isTransDup(mostRecent, newTrans) {
     if (!mostRecent) {
         return false;
     }
+    // console.log(mostRecent.date + ' | ' + newTrans.date);
     return (Date.parse(mostRecent.date) >= Date.parse(newTrans.date));
+}
+
+function updateAll(payee, category) {
+
 }
 
 // adding transactions to the database add send them back to the client
@@ -40,14 +45,22 @@ router.post('/:userEmail', verifyToken, async (req, res) => {
         // for each of the transactions, check if in date & add to database
         for (let transaction of transactions) {
             if (!isTransDup(mostRecent, transaction)) {
+                // check if a category is already set for this payee
+                const potentialCategories = await Transaction.find({'payee': transaction.payee, 'category': { $not: { $regex: 'Uncategorized'} } });
+                if (potentialCategories.length > 0) {
+                    transaction.category = potentialCategories[0].category;
+                    if (potentialCategories.length > 1) {
+                        transaction.note = 'Other potential categories were available';
+                    }
+                }
                 transaction = await Transaction.addTransaction(transaction);
                 newTransactions.push(transaction);
             }
         }
         // send added transactions back to the client
-        console.log(newTransactions);
         res.status(200).send(newTransactions);
     } catch (err) {
+        console.log(err);
         res.status(401).send(err);
     }
     
@@ -57,11 +70,69 @@ router.post('/:userEmail', verifyToken, async (req, res) => {
 router.get('/:userEmail', verifyToken, async (req, res) => {
     try {
         const transactions = await Transaction.getAllTransactions(req.params.userEmail);
-        console.log(transactions);
         res.status(200).send(transactions);
     } catch (err) {
         res.status(401).send(err);
     }
 });
 
+router.put('/:transId', verifyToken, async (req, res) => {
+    try {
+        const updatedTrans = await Transaction.updateTransaction(req.params.transId, req.body);
+        if (updatedTrans) {
+            res.status(200).send(updatedTrans);
+        } else {
+            res.status(401).send('Trans could not be found with that id');
+        }
+    } catch (err) {
+        res.status(401).send(err);
+    }
+});
+
+router.put('/updateCategories/:userEmail', verifyToken, async (req, res) => {
+    updated = []
+    try {
+        // get all transactions to be set with a category
+        const transactions = await Transaction.find({'userEmail': req.params.userEmail, 'payee': req.body.payee });
+        // go through the transactions and set they category
+        for (let i = 0; i < transactions.length; i++) {
+            transactions[i].category = req.body.category;
+            const newTrans = await Transaction.updateTransaction(transactions[i]._id, transactions[i]);
+            updated.push(newTrans);
+        }
+        res.status(200).send('Transactions updated!');
+    } catch (err) {
+        console.log(err);
+        res.status(401).send(err);
+    }
+});
+
+router.put('/updatecategory', verifyToken, async (req, res) => {
+    console.log(req.body);
+    try {
+        const newTrans = await Transaction.updateTransaction(req.body._id, req.body);
+        if (newTrans) {
+            res.status(200).send(newTrans);
+        } else {
+            res.status(401).send('Error updating transaction');
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(401).send(err);
+    }
+});
+
+router.get('/:userEmail/:timeframe', verifyToken, async (req, res) => {
+    try {
+        const transactions = await Transaction.getAllTransactionsInTimeframe(req.params.userEmail, req.params.timeframe);
+        if (transactions) {
+            res.status(200).send(transactions);
+        } else {
+            res.status(200).send('Could not find transactions for timeframe');
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(401).send(err);
+    }
+});
 module.exports = router;
